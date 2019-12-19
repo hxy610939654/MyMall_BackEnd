@@ -169,4 +169,20 @@
     select count(1) from mymall_user
     where email = #{email}
   </select>
+
+  <select id="selectQuestionByUsername" resultType="string" parameterType="string">
+    SELECT
+    question
+    FROM mymall_user
+    WHERE username = #{username}
+  </select>
+
+  <select id="checkAnswer" resultType="int" parameterType="map">
+    SELECT
+    COUNT (1)
+    FROM mymall_user
+    WHERE username = #{username}
+    and question =#{question}
+    and answer = #{answer}
+  </select>
 </mapper>

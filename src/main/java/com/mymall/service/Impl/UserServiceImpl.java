@@ -2,6 +2,7 @@ package com.mymall.service.Impl;
 
 import com.mymall.common.Const;
 import com.mymall.common.ServerResponse;
+import com.mymall.common.TokenCache;
 import com.mymall.dao.UserMapper;
 import com.mymall.pojo.User;
 import com.mymall.service.IUserService;
@@ -10,6 +11,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.omg.PortableServer.ServantRetentionPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service("iUserService")
 public class UserServiceImpl implements IUserService {
@@ -71,6 +74,29 @@ public class UserServiceImpl implements IUserService {
         return ServerResponse.createBySuccessMessage("Verification success");
     }
 
+    public ServerResponse selectQuestion(String username){
+        ServerResponse validResponse = this.checkValid(username,Const.USERNAME);
+        if(validResponse.isSuccess()){
+            return ServerResponse.createByErrorMessage("Username dose not exist");
+        }
+        String question = userMapper.selectQuestionByUsername(username);
+        if(StringUtils.isNoneBlank(question)){
+            return ServerResponse.createBySuccess(question);
+        }
+        return ServerResponse.createByErrorMessage("Password question is empty");
+
+
+    }
+
+    public ServerResponse<String> checkAnswer(String username,String question,String answer){
+        int resultCount = userMapper.checkAnswer(username,question,answer);
+        if(resultCount > 0){
+            String forgetToken = UUID.randomUUID().toString();
+            TokenCache.setKey("token_"+username,forgetToken);
+            return ServerResponse.createBySuccess(forgetToken);
+        }
+        return ServerResponse.createByErrorMessage("Invalid password question");
+    }
 
 
 }
