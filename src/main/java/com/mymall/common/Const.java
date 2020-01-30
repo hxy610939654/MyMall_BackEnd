@@ -48,4 +48,94 @@ public class Const {
             return code;
         }
     }
+
+    public enum OrderStatusEnum{
+        CANCELED(0,"Order canceled."),
+        UNPAIED(10,"Unpaied."),
+        PAIED(20,"Paied."),
+        SHIPPED(40,"Order shipped."),
+        ORDER_SUCCEED(50,"Order finished."),
+        ORDER_CLOSSED(60,"Order clossed.");
+
+        OrderStatusEnum(int code,String value){
+            this.code=code;
+            this.value=value;
+        }
+        private  String value;
+        private int code;
+        public String getValue() {
+            return value;
+        }
+        public int getCode() {
+            return code;
+        }
+
+        public static OrderStatusEnum codeOf(int code){
+            for(OrderStatusEnum orderStatusEnum : values()){
+                if(orderStatusEnum.getCode() == code){
+                    return orderStatusEnum;
+                }
+            }
+            throw new RuntimeException("Do not found enumerate.");
+        }
+    }
+
+    public interface AlipayCallback{
+        String TRADE_STATUS_WAIT_BAYER_PAY = "WAIT_BAYER_PAY";
+        String TRADE_STATUS_TRADE_SUCCESS = "TRADE_SUCCESS";
+
+        String RESPONSE_SUCCESS = "success";
+        String RESPONSE_FAILED = "failed";
+    }
+
+    public enum PayPlatformEnum{
+        ALIPAY(1,"Alipay");
+
+
+        PayPlatformEnum(int code,String value){
+            this.code=code;
+            this.value=value;
+        }
+
+        private  String value;
+        private int code;
+
+        public String getValue() {
+            return value;
+        }
+
+        public int getCode() {
+            return code;
+        }
+    }
+
+    public enum PaymentTypeEnum{
+        ONLINE_PAY(1,"Online payment.");
+
+        PaymentTypeEnum(int code,String value){
+            this.code=code;
+            this.value=value;
+        }
+
+        private  String value;
+        private int code;
+
+        public String getValue() {
+            return value;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public static PaymentTypeEnum codeOf(int code){
+            for(PaymentTypeEnum paymentTypeEnum : values()){
+                if(paymentTypeEnum.getCode() == code){
+                    return paymentTypeEnum;
+                }
+            }
+            throw new RuntimeException("Do not found enumerate.");
+        }
+    }
+
 }
