@@ -171,7 +171,14 @@
     where order_no = #{orderNo}
     and user_id = #{userId}
   </select>
-  
+
+  <select id="getByOrderNo" resultMap="BaseResultMap" parameterType="map">
+    select
+    <include refid="Base_Column_List"></include>
+    from mymall_order_item
+    where order_no = #{orderNo}
+  </select>
+
   <insert id="batchInsert" parameterType="list">
     insert into mymall_order_item (id, order_no, user_id,
       product_id, product_name, product_image,

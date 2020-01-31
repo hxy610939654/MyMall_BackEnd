@@ -11,12 +11,12 @@ import com.alipay.demo.trade.model.result.AlipayF2FPrecreateResult;
 import com.alipay.demo.trade.service.AlipayTradeService;
 import com.alipay.demo.trade.service.impl.AlipayTradeServiceImpl;
 import com.alipay.demo.trade.utils.ZxingUtils;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.mymall.common.Const;
 import com.mymall.common.ServerResponse;
-import com.mymall.controller.portal.ProductController;
 import com.mymall.dao.*;
 import com.mymall.pojo.*;
 import com.mymall.service.IOrderService;
@@ -28,17 +28,13 @@ import com.mymall.vo.OrderItemVo;
 import com.mymall.vo.OrderProductVo;
 import com.mymall.vo.OrderVo;
 import com.mymall.vo.ShippingVo;
-import net.sf.jsqlparser.schema.Server;
 import org.apache.commons.lang.StringUtils;
-import org.aspectj.weaver.ast.Or;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import sun.plugin2.gluegen.runtime.StructAccessor;
 
-import javax.print.attribute.standard.Severity;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -86,7 +82,7 @@ public class OrderServiceImpl implements IOrderService{
         }
         orderItemMapper.batchInsert(orderItemList);
 
-        this.reducProductStock(orderItemList);
+        this.reduceProductStock(orderItemList);
 
         this.cleanCart(cartList);
 
@@ -146,14 +142,14 @@ public class OrderServiceImpl implements IOrderService{
 
     private ShippingVo assembleShippingVo(Shipping shipping){
         ShippingVo shippingVo = new ShippingVo();
-        shipping.setReceiverName(shipping.getReceiverName());
-        shipping.setReceiverAddress(shipping.getReceiverAddress());
-        shipping.setReceiverProvince(shipping.getReceiverProvince());
-        shipping.setReceiverCity(shipping.getReceiverCity());
-        shipping.setReceiverDistrict(shipping.getReceiverDistrict());
-        shipping.setReceiverMobile(shipping.getReceiverMobile());
-        shipping.setReceiverZip(shipping.getReceiverZip());
-        shipping.setReceiverPhone(shipping.getReceiverPhone());
+        shippingVo.setReceiverName(shipping.getReceiverName());
+        shippingVo.setReceiverAddress(shipping.getReceiverAddress());
+        shippingVo.setReceiverProvince(shipping.getReceiverProvince());
+        shippingVo.setReceiverCity(shipping.getReceiverCity());
+        shippingVo.setReceiverDistrict(shipping.getReceiverDistrict());
+        shippingVo.setReceiverMobile(shipping.getReceiverMobile());
+        shippingVo.setReceiverZip(shipping.getReceiverZip());
+        shippingVo.setReceiverPhone(shipping.getReceiverPhone());
         return shippingVo;
 
     }
@@ -166,11 +162,11 @@ public class OrderServiceImpl implements IOrderService{
         }
     }
 
-    private void reducProductStock(List<OrderItem> orderItemList){
+    private void reduceProductStock(List<OrderItem> orderItemList){
         for(OrderItem orderItem : orderItemList){
-            Product produc = productMapper.selectByPrimaryKey(orderItem.getProductId());
-            produc.setStock(produc.getStock()-orderItem.getQuantity());
-            productMapper.updateByPrimaryKeySelective(produc);
+            Product product = productMapper.selectByPrimaryKey(orderItem.getProductId());
+            product.setStock(product.getStock()-orderItem.getQuantity());
+            productMapper.updateByPrimaryKeySelective(product);
         }
     }
 
@@ -235,7 +231,6 @@ public class OrderServiceImpl implements IOrderService{
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setTotalPrice(BigdecimalUtil.mul(product.getPrice().doubleValue(),cartItem.getQuantity()));
             orderItemList.add(orderItem);
-
         }
         return  ServerResponse.createBySuccess(orderItemList);
 
@@ -282,6 +277,42 @@ public class OrderServiceImpl implements IOrderService{
         orderProductVo.setOrderItemVoList(orderItemVoList);
         orderProductVo.setImageHost(PropertiesUtil.getProperty("ftp.server.http.prefix"));
         return ServerResponse.createBySuccess(orderProductVo);
+    }
+
+    public ServerResponse<OrderVo> getOrderDetail(Integer userId,Long orderNo){
+        Order order = orderMapper.selectByUserIdAndOrderNo(userId,orderNo);
+        if(order != null){
+            List<OrderItem> orderItemList = orderItemMapper.getByOrderNoUserId(orderNo,userId);
+            OrderVo orderVo = assembleOrderVo(order,orderItemList);
+            return ServerResponse.createBySuccess(orderVo);
+        }
+        return ServerResponse.createByErrorMessage("Can not find this order.");
+    }
+
+    public ServerResponse<PageInfo> getOrderList(Integer userId,int pageNum,int pageSize){
+        PageHelper.startPage(pageNum,pageSize);
+        List<Order> orderList = orderMapper.selectByUserId(userId);
+        List<OrderVo> orderVoList = assembleOrderVoList(orderList,userId);
+        PageInfo pageResult = new PageInfo(orderList);
+        pageResult.setList(orderVoList);
+        return ServerResponse.createBySuccess(pageResult);
+
+
+    }
+
+    private List<OrderVo> assembleOrderVoList(List<Order> orderList, Integer userId){
+        List<OrderVo> orderVoList = Lists.newArrayList();
+        for(Order order : orderList){
+            List<OrderItem> orderItemList = Lists.newArrayList();
+            if(userId == null){
+                orderItemList = orderItemMapper.getByOrderNo(order.getOrderNo());
+            }else {
+                orderItemList = orderItemMapper.getByOrderNoUserId(order.getOrderNo(),userId);
+            }
+            OrderVo orderVo = assembleOrderVo(order,orderItemList);
+            orderVoList.add(orderVo);
+        }
+        return orderVoList;
     }
 
 
@@ -459,4 +490,60 @@ public class OrderServiceImpl implements IOrderService{
         return ServerResponse.createByError();
     }
 
+
+
+
+
+
+
+
+    //Backend
+
+    public ServerResponse<PageInfo> manageList(int pageNum,int pageSize){
+        PageHelper.startPage(pageNum,pageSize);
+        List<Order> orderList = orderMapper.selectAllOrder();
+        List<OrderVo> orderVoList = this.assembleOrderVoList(orderList,null);
+        PageInfo pageResult = new PageInfo(orderList);
+        pageResult.setList(orderVoList);
+        return ServerResponse.createBySuccess(pageResult);
+    }
+
+    public ServerResponse<OrderVo> manageDetail(Long orderNo){
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if(order != null){
+            List<OrderItem> orderItemList = orderItemMapper.getByOrderNo(orderNo);
+            OrderVo orderVo = assembleOrderVo(order,orderItemList);
+            return ServerResponse.createBySuccess(orderVo);
+        }
+        return ServerResponse.createByErrorMessage("Order does not exist.");
+    }
+
+    public ServerResponse<PageInfo> manageSearch(Long orderNo,int pageNum,int pageSize){
+        PageHelper.startPage(pageNum,pageSize);
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if(order != null){
+            List<OrderItem> orderItemList = orderItemMapper.getByOrderNo(orderNo);
+            OrderVo orderVo = assembleOrderVo(order,orderItemList);
+            PageInfo pageResult = new PageInfo(Lists.newArrayList(order));
+            pageResult.setList(Lists.newArrayList(orderVo));
+
+            return ServerResponse.createBySuccess(pageResult);
+        }
+        return ServerResponse.createByErrorMessage("Order does not exist.");
+    }
+
+    public ServerResponse<String> manageSendGoods(Long orderNo){
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        if(order != null){
+            if(order.getStatus() == Const.OrderStatusEnum.PAIED.getCode()){
+                order.setStatus(Const.OrderStatusEnum.SHIPPED.getCode());
+                order.setSendTime(new Date());
+                orderMapper.updateByPrimaryKeySelective(order);
+                return ServerResponse.createBySuccess("Goods has been shipped.");
+            }else {
+                return ServerResponse.createByErrorMessage("The order has not been paid or has been canceled.");
+            }
+        }
+        return ServerResponse.createByErrorMessage("Order does not exist.");
+    }
 }
