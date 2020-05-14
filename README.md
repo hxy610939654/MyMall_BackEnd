@@ -1,1 +1,1 @@
-Self-study demo
+E-commerce back-end demo
