@@ -1,1 +1,1 @@
-Self-study project
+Self-study demo
